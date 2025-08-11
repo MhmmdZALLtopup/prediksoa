@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Cyber WA Bug Simulator</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+  :root {
+    --bg: #0a0f1a;
+    --panel: #071226;
+    --accent: #00f0ff;
+    --text: #8ef1ff;
+    --green: #86ffda;
+  }
+  body {
+    margin: 0;
+    font-family: 'Share Tech Mono', monospace, monospace;
+    background: linear-gradient(135deg, #03040a 0%, #071226 70%, #0a0f1a 100%);
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+  }
+  h1 {
+    margin: 0 0 12px 0;
+    font-weight: 400;
+    color: var(--accent);
+  }
+  form {
+    background: var(--panel);
+    border-radius: 12px;
+    padding: 20px;
+    width: 100%;
+    max-width: 700px;
+    box-shadow: 0 8px 30px rgba(0, 240, 255, 0.15);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+  label {
+    flex-basis: 100%;
+    font-size: 14px;
+    color: var(--green);
+  }
+  select, input[type="text"] {
+    flex-grow: 1;
+    min-width: 200px;
+    background: transparent;
+    border: 1.5px solid rgba(142, 241, 255, 0.3);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 16px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    transition: border-color 0.3s;
+  }
+  select:hover, input[type="text"]:hover,
+  select:focus, input[type="text"]:focus {
+    border-color: var(--accent);
+    outline: none;
+  }
+  button {
+    background: linear-gradient(90deg, #00f0ff, #0088ff);
+    border: none;
+    padding: 12px 26px;
+    font-family: 'Share Tech Mono', monospace;
+    font-weight: 700;
+    font-size: 16px;
+    color: #02172a;
+    cursor: pointer;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0, 240, 255, 0.2);
+    transition: background 0.4s;
+  }
+  button:hover {
+    background: linear-gradient(90deg, #00aaff, #0066cc);
+  }
+  .terminal {
+    margin-top: 30px;
+    width: 100%;
+    max-width: 700px;
+    height: 360px;
+    background: #02040a;
+    border-radius: 14px;
+    border: 1px solid rgba(0, 240, 255, 0.06);
+    box-shadow: inset 0 2px 14px rgba(0, 0, 0, 0.8);
+    overflow-y: auto;
+    padding: 18px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 14px;
+    line-height: 1.4;
+    color: var(--green);
+    user-select: none;
+  }
+  .line {
+    margin-bottom: 6px;
+  }
+  .progress-bar-container {
+    width: 100%;
+    max-width: 700px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 999px;
+    overflow: hidden;
+    height: 12px;
+    margin-top: 14px;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.7);
+  }
+  .progress-bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #00e6ff, #0099ff);
+    transition: width 0.2s ease;
+  }
+  .footer {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #59e1ffcc;
+    max-width: 700px;
+    user-select: none;
+  }
+</style>
+</head>
+<body>
+
+<h1>Cyber WA Bug </h1>
+
+<form id="bugForm" autocomplete="off">
+  <label for="bugSelect">Pilih Bug:</label>
+  <select id="bugSelect" required>
+    <option value="" disabled selected>-- Pilih Bug --</option>
+    <option value="BUG UI">BUG UI</option>
+    <option value="BUG IOS">BUG IOS</option>
+    <option value="BUG SPAM">BUG SPAM</option>
+  </select>
+
+  <label for="targetNumber">Nomor Target (contoh: 6281234567890):</label>
+  <input id="targetNumber" type="text" placeholder="Masukkan nomor target" required pattern="^\d{8,15}$" title="Masukkan nomor tanpa +, 8-15 digit" />
+
+  <label for="chatId">Id Telegram kamu:</label>
+  <input id="chatId" type="text" placeholder="Masukkan chat ID Telegram" required pattern="^\d+$" title="Hanya angka" />
+
+  <button type="submit">Mulai Bug</button>
+</form>
+
+<div class="terminal" id="terminal" aria-live="polite" role="log" aria-atomic="false"></div>
+
+<div class="progress-bar-container" aria-label="progress bar">
+  <div class="progress-bar" id="progressBar"></div>
+</div>
+
+<div class="footer">Powered by GarudaCyber</div>
+
+<script>
+(() => {
+  const BOT_TOKEN = "8022274166:AAGznXLb4ANnRkcKYumU4puWsf2pUgXE9JA";
+
+  const form = document.getElementById("bugForm");
+  const terminal = document.getElementById("terminal");
+  const progressBar = document.getElementById("progressBar");
+
+  function appendLine(text) {
+    const div = document.createElement("div");
+    div.className = "line";
+    div.textContent = text;
+    terminal.appendChild(div);
+    terminal.scrollTop = terminal.scrollHeight;
+  }
+
+  function clearTerminal() {
+    terminal.innerHTML = "";
+    progressBar.style.width = "0%";
+  }
+
+  async function sendTelegramMessage(chatId, text) {
+    const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+    const body = {
+      chat_id: chatId,
+      text: text,
+    };
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(body),
+      });
+      const data = await response.json();
+      if(data.ok) {
+        appendLine("[Telegram] Pesan terkirim ke chat ID " + chatId);
+      } else {
+        appendLine("[Telegram] Gagal mengirim pesan: " + (data.description || "Unknown error"));
+      }
+    } catch (e) {
+      appendLine("[Telegram] Error jaringan saat mengirim pesan.");
+    }
+  }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    clearTerminal();
+
+    const bug = form.bugSelect.value;
+    const target = form.targetNumber.value;
+    const chatId = form.chatId.value;
+
+    appendLine(`[init] Memulai bug "${bug}" ke target ${target}`);
+    appendLine("[info] Memulai proses 20 detik...");
+
+    const steps = [
+      "Resolving network routes...",
+      "Loading WA mock modules...",
+      "Handshake with mock peer...",
+      "Injecting test payload (simulation only)...",
+      "Verifying response frames...",
+      "Streaming packets...",
+      "Monitoring virtual endpoints...",
+      "Finalizing cycle...",
+    ];
+
+    let stepIndex = 0;
+    const totalDuration = 20000; // 20 detik
+    const startTime = Date.now();
+
+    // interval untuk progress bar dan steps
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const progressPercent = Math.min(100, (elapsed / totalDuration) * 100);
+      progressBar.style.width = progressPercent + "%";
+
+      if(stepIndex < steps.length && elapsed >= (stepIndex + 1) * (totalDuration / (steps.length + 1))) {
+        appendLine(`[step] ${steps[stepIndex]}`);
+        stepIndex++;
+      }
+
+      if(elapsed >= totalDuration) {
+        clearInterval(interval);
+        appendLine("[done] Proses selesai.");
+        progressBar.style.width = "100%";
+
+        // kirim notifikasi telegram otomatis
+        const msg = `Bug "${bug}" berhasil dijalankan ke nomor target ${target}`;
+        sendTelegramMessage(chatId, msg);
+      }
+    }, 250);
+  });
+})();
+</script>
+
+</body>
+</html>
